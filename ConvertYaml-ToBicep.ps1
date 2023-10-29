@@ -127,7 +127,7 @@ Function ConvertYaml-ToBicep {
 
         if ($null -ne $id) {
             if ($kind -eq "Scheduled" -or $kind -eq "NRT") {
-                Write-Output "`talertRuleTemplateName: `'$id`'"
+                Write-Output "`t`talertRuleTemplateName: `'$id`'"
             }
         }
     }
