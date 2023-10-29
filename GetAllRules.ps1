@@ -1,3 +1,5 @@
+
+
 Function Search-AzureSentinelRepo {
     param(
         [string]$repoDirectory
@@ -82,22 +84,7 @@ Function Search-AzureSentinelRepoForSingleGuid {
     }
 }
 
-
-
-# Initialize or load existing rules list
-$existingRulesListPath = ".\existingRulesList.json"
-if (Test-Path $existingRulesListPath) {
-    $existingRulesList = Get-Content $existingRulesListPath -Raw | ConvertFrom-Json
-    if ($existingRulesList -isnot [PSCustomObject]) {
-        $existingRulesList = @{}
-    }
-}
-else {
-    $existingRulesList = @{}
-}
-
-# Function to convert PSCustomObject to Hashtable
-function ConvertTo-HashTable {
+Function ConvertTo-HashTable {
     param (
         [PSCustomObject]$InputObject
     )
@@ -108,33 +95,52 @@ function ConvertTo-HashTable {
     return $hash
 }
 
-# Convert the existing rules list to Hashtable
-$existingRulesHashTable = ConvertTo-HashTable -InputObject $existingRulesList
 
-# Set the path to the cloned Azure-Sentinel directory
-$TempFolder = "C:\temp\Azure-Sentinel"
+Function Get-AzureSentinelRules {
 
-# Check if the Azure-Sentinel directory exists and pull updates or clone the repository
-if (Test-Path $TempFolder) {
-    Push-Location $TempFolder
-    git pull
-    Pop-Location
-}
-else {
-    git clone https://github.com/Azure/Azure-Sentinel.git $TempFolder
-}
-
-# Search Azure Sentinel GitHub repository
-$newRulesList = Search-AzureSentinelRepo -repoDirectory $TempFolder
-
-# Check for new rules and update the existing rules list
-foreach ($key in $newRulesList.Keys) {
-    if (-Not $existingRulesHashTable.ContainsKey($key)) {
-        $existingRulesHashTable[$key] = $newRulesList[$key]
-        Write-Host "New rule added: $($newRulesList[$key].Name)"
+    # Initialize or load existing rules list
+    $existingRulesListPath = ".\existingRulesList.json"
+    if (Test-Path $existingRulesListPath) {
+        $existingRulesList = Get-Content $existingRulesListPath -Raw | ConvertFrom-Json
+        if ($existingRulesList -isnot [PSCustomObject]) {
+            $existingRulesList = @{}
+        }
     }
+    else {
+        $existingRulesList = @{}
+    }
+
+    # Function to convert PSCustomObject to Hashtable
+
+    # Convert the existing rules list to Hashtable
+    $existingRulesHashTable = ConvertTo-HashTable -InputObject $existingRulesList
+
+    # Set the path to the cloned Azure-Sentinel directory
+    $TempFolder = "C:\temp\Azure-Sentinel"
+
+    # Check if the Azure-Sentinel directory exists and pull updates or clone the repository
+    if (Test-Path $TempFolder) {
+        Push-Location $TempFolder
+        git pull
+        Pop-Location
+    }
+    else {
+        git clone https://github.com/Azure/Azure-Sentinel.git $TempFolder
+    }
+
+    # Search Azure Sentinel GitHub repository
+    $newRulesList = Search-AzureSentinelRepo -repoDirectory $TempFolder
+
+    # Check for new rules and update the existing rules list
+    foreach ($key in $newRulesList.Keys) {
+        if (-Not $existingRulesHashTable.ContainsKey($key)) {
+            $existingRulesHashTable[$key] = $newRulesList[$key]
+            Write-Host "New rule added: $($newRulesList[$key].Name)"
+        }
+    }
+
+
+    # Save updated existing rules list
+    return $existingRulesHashTable | ConvertTo-Json | Set-Content $existingRulesListPath
+
 }
-
-
-# Save updated existing rules list
-$existingRulesHashTable | ConvertTo-Json | Set-Content $existingRulesListPath
